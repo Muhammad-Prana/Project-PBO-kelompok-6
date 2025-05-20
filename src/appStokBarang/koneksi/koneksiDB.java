@@ -16,5 +16,5 @@ public class koneksiDB {
                 System.out.println("Koneksi Gagal: " + e.getMessage());
                 return null;
             }
-        }.
+        }
     }
