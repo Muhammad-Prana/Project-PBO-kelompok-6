@@ -12,5 +12,5 @@ public class tesKoneksi {
             } else {
                 System.out.println("❌ Koneksi GAGAL!");
             }
-        }.
+        }
     }
