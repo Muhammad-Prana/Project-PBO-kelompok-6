@@ -102,3 +102,4 @@ public class ujiCoba extends JFrame {
         SwingUtilities.invokeLater(ujiCoba::new);
     }
 }
+//contoh
