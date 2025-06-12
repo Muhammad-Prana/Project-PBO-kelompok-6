@@ -86,4 +86,3 @@ import java.awt.*;
             SwingUtilities.invokeLater(Signup2::new);
         }
     }
-//

@@ -129,4 +129,3 @@ import java.awt.*;
             SwingUtilities.invokeLater(Pengaturan2::new);
         }
     }
-//

@@ -240,4 +240,3 @@ public class StokBarang2 extends JFrame {
         SwingUtilities.invokeLater(() -> new StokBarang2().setVisible(true));
     }
 }
-//

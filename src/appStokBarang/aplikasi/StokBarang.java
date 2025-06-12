@@ -168,4 +168,3 @@ public class StokBarang extends JFrame {
         SwingUtilities.invokeLater(StokBarang::new);
     }
 }
-//

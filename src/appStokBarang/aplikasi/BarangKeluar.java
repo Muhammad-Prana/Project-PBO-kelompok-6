@@ -118,4 +118,3 @@ import java.awt.*;
             SwingUtilities.invokeLater(BarangKeluar::new);
         }
     }
-//

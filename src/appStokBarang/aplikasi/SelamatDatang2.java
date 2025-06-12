@@ -88,4 +88,3 @@ public class SelamatDatang2 extends JFrame {
         SwingUtilities.invokeLater(SelamatDatang2::new);
     }
 }
-//
