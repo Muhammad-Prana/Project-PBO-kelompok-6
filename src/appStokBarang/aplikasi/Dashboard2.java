@@ -196,3 +196,4 @@ public class Dashboard2 extends JFrame {
         public void setHarga(int harga) { this.harga = harga; }
     }
 }
+//

@@ -106,3 +106,4 @@ import java.awt.*;
             SwingUtilities.invokeLater(BarangMasuk::new);
         }
     }
+//
