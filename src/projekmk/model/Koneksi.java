@@ -9,9 +9,9 @@ public class Koneksi {
     String driver = "com.mysql.cj.jdbc.Driver";
     String connect = "jdbc:mysql://"+ host + "/" + database;
 
-    Connection conn;
-    Statement stmt;
-    ResultSet rs;
+//    Connection conn;
+//    Statement stmt;
+//    ResultSet rs;
 
     public Koneksi() {
 
