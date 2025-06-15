@@ -1,5 +1,6 @@
-import appStokBarang.koneksi.koneksiDB;
+package appStokBarang.aplikasi;
 
+import appStokBarang.koneksi.koneksiDB;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;

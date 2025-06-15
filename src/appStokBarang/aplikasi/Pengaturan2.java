@@ -1,6 +1,6 @@
 package appStokBarang.aplikasi;
 
-import appStokBarang.Login; // pastikan ini sesuai dengan package Login.java
+import appStokBarang.aplikasi.Login; // pastikan ini sesuai dengan package Login.java
 
 import javax.swing.*;
 import java.awt.*;
@@ -138,7 +138,7 @@ public class Pengaturan2 extends JFrame {
             case "Stok Barang": new StokBarang().setVisible(true); break;
             case "Barang Masuk": new BarangMasuk().setVisible(true); break;
             case "Barang Keluar": new BarangKeluar().setVisible(true); break;
-            case "Pengaturan": new Pengaturan().setVisible(true); break;
+            case "Pengaturan": new Pengaturan2().setVisible(true); break;
         }
         dispose();
     }

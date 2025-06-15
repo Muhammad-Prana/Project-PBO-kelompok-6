@@ -186,7 +186,7 @@ public class BarangMasuk extends JFrame {
                     return;
                 }
 
-                String insertQuery = "INSERT INTO tb_barang (nama_barang, kategori, satuan, harga, keterangan, stok) VALUES (?, 'lainnya', 'pcs', 0, '', 0)";
+                String insertQuery = "INSERT INTO tb_barang (nama_barang, kategori, satuan, keterangan, stok) VALUES (?, 'lainnya', 'pcs','', 0)";
                 PreparedStatement stmt = conn.prepareStatement(insertQuery);
                 stmt.setString(1, namaBaru.trim());
                 stmt.executeUpdate();
