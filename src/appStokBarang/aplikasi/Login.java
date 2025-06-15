@@ -8,6 +8,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import appStokBarang.aplikasi.Dashboard;
+
 
 public class Login extends JFrame {
 
@@ -90,8 +92,10 @@ public class Login extends JFrame {
                         String correctPassword = rs.getString("password");
                         if (inputPassword.equals(correctPassword)) {
                             JOptionPane.showMessageDialog(null, "Login berhasil!");
-//                             TODO: buka dashboard
-                        } else {
+                            dispose(); // Menutup jendela login
+                            new Dashboard().setVisible(true); // Membuka dashboard
+                        }
+                        else {
                             JOptionPane.showMessageDialog(null, "Password salah.", "Login Gagal", JOptionPane.ERROR_MESSAGE);
                         }
                     } else {
