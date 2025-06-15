@@ -1,15 +1,13 @@
 package appStokBarang.aplikasi;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
-import java.util.Vector;
 
 public class Dashboard extends JFrame {
 
-    private JComboBox<String> cbNamaBarang;
-    private JTextField tfJumlah, tfTanggal, tfKeterangan;
     private DefaultTableModel model;
 
     private static final String DB_URL = "jdbc:mysql://localhost:3306/db_stokbarang";
@@ -23,13 +21,12 @@ public class Dashboard extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Sidebar
         JPanel sidebar = new JPanel();
         sidebar.setPreferredSize(new Dimension(200, getHeight()));
         sidebar.setBackground(new Color(255, 204, 229));
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
 
-        JLabel logo = new JLabel("🌸", JLabel.CENTER);
+        JLabel logo = new JLabel("\uD83C\uDF38", JLabel.CENTER);
         logo.setFont(new Font("SansSerif", Font.PLAIN, 48));
         logo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -42,28 +39,14 @@ public class Dashboard extends JFrame {
             button.setFocusPainted(false);
             button.setMaximumSize(new Dimension(180, 40));
             button.setAlignmentX(Component.CENTER_ALIGNMENT);
-            if (item.equals("Dashboard")) {
-                button.setBackground(new Color(255, 153, 204));
-            } else {
-                button.setBackground(new Color(255, 204, 229));
-            }
+            button.setBackground(item.equals("Dashboard") ? new Color(255, 153, 204) : new Color(255, 204, 229));
             button.setBorderPainted(false);
-
             final String menuName = item;
-            button.addActionListener(ev -> {
-                switch (menuName) {
-                    case "Barang Masuk":
-                        new BarangMasuk().setVisible(true);
-                        dispose();
-                        break;
-                }
-            });
-
+            button.addActionListener(ev -> navigateTo(menuName));
             sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
             sidebar.add(button);
         }
 
-        // Header
         JPanel header = new JPanel(new BorderLayout());
         header.setPreferredSize(new Dimension(getWidth(), 60));
         header.setBackground(new Color(255, 105, 180));
@@ -74,8 +57,8 @@ public class Dashboard extends JFrame {
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         JTextField searchField = new JTextField("Cari", 15);
-        JButton searchBtn = new JButton("🔍");
-        JLabel profileIcon = new JLabel("👤");
+        JButton searchBtn = new JButton("\uD83D\uDD0D");
+        JLabel profileIcon = new JLabel("\uD83D\uDC64");
 
         searchPanel.setBackground(new Color(255, 105, 180));
         searchPanel.add(searchField);
@@ -85,7 +68,6 @@ public class Dashboard extends JFrame {
         header.add(title, BorderLayout.WEST);
         header.add(searchPanel, BorderLayout.EAST);
 
-        // Content Panel
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(Color.WHITE);
 
@@ -95,13 +77,26 @@ public class Dashboard extends JFrame {
         tableTitle.setBackground(new Color(255, 204, 229));
         tableTitle.setPreferredSize(new Dimension(100, 50));
 
-        String[] columnNames = {"No", "Nama Barang", "Satuan", "Keterangan"};
-        model = new DefaultTableModel(columnNames, 0);
+        String[] columnNames = {"ID", "Nama Barang", "Satuan", "Stok", "Status", "Keterangan"};
+        model = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
         JTable table = new JTable(model);
         table.setRowHeight(30);
         table.setFont(new Font("SansSerif", Font.PLAIN, 16));
         table.getTableHeader().setBackground(new Color(221, 160, 221));
         table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 16));
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
         JScrollPane scrollPane = new JScrollPane(table);
 
         JPanel tableContainer = new JPanel(new BorderLayout());
@@ -120,21 +115,53 @@ public class Dashboard extends JFrame {
         setVisible(true);
     }
 
+    private void navigateTo(String menuName) {
+        switch (menuName) {
+            case "Dashboard":
+                break;
+            case "Stok Barang":
+                new StokBarang().setVisible(true);
+                dispose();
+                break;
+            case "Barang Masuk":
+                new BarangMasuk().setVisible(true);
+                dispose();
+                break;
+            case "Barang Keluar":
+                new BarangKeluar().setVisible(true);
+                dispose();
+                break;
+            case "Pengaturan":
+                new Pengaturan().setVisible(true);
+                dispose();
+                break;
+        }
+    }
+
     private void loadDataFromDatabase() {
         model.setRowCount(0);
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT b.id_barang, b.nama_barang, b.satuan, IFNULL(sm.keterangan, '') AS keterangan FROM tb_barang b LEFT JOIN tb_stok_masuk sm ON b.id_barang = sm.id_barang GROUP BY b.id_barang")) {
+             ResultSet rs = stmt.executeQuery("SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang")) {
 
             while (rs.next()) {
+                int stok = rs.getInt("stok");
+                String status;
+                if (stok == 0) status = "❌ Kosong";
+                else if (stok <= 5) status = "⚠️ Rendah";
+                else status = "✅ Aman";
+
                 Object[] row = {
                         rs.getInt("id_barang"),
                         rs.getString("nama_barang"),
                         rs.getString("satuan"),
+                        stok,
+                        status,
                         rs.getString("keterangan")
                 };
                 model.addRow(row);
             }
+
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,
                     "Gagal memuat data dari database:\n" + e.getMessage(),

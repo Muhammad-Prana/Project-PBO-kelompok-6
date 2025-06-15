@@ -1,166 +1,261 @@
+package appStokBarang.aplikasi;
+
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.*;
 
 public class StokBarang extends JFrame {
-
+    private JTable table;
     private DefaultTableModel tableModel;
+    private JTextField searchField;
+    private JButton btnEdit, btnExport;
 
     public StokBarang() {
-        setTitle("Manajemen Stok Barang");
-        setSize(800, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setTitle("Manajemen Stok Barang - Stok Barang");
+        setSize(1000, 600);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Sidebar
         JPanel sidebar = new JPanel();
+        sidebar.setPreferredSize(new Dimension(200, getHeight()));
         sidebar.setBackground(new Color(255, 204, 229));
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
-        sidebar.setPreferredSize(new Dimension(200, getHeight()));
 
-        JLabel logo = new JLabel("🌸", SwingConstants.CENTER);
+        JLabel logo = new JLabel("\uD83C\uDF38", JLabel.CENTER);
         logo.setFont(new Font("SansSerif", Font.PLAIN, 48));
         logo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        sidebar.add(Box.createVerticalStrut(20));
         sidebar.add(logo);
 
         String[] menuItems = {"Dashboard", "Stok Barang", "Barang Masuk", "Barang Keluar", "Pengaturan"};
         for (String item : menuItems) {
-            JButton btn = new JButton(item);
-            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-            btn.setMaximumSize(new Dimension(180, 40));
-            btn.setFocusPainted(false);
-            btn.setBorderPainted(false);
-            btn.setBackground(item.equals("Stok Barang") ? new Color(255, 153, 204) : new Color(255, 204, 229));
-            sidebar.add(Box.createVerticalStrut(10));
-            sidebar.add(btn);
+            JButton button = new JButton(item);
+            button.setFocusPainted(false);
+            button.setMaximumSize(new Dimension(180, 40));
+            button.setAlignmentX(Component.CENTER_ALIGNMENT);
+            button.setBackground(item.equals("Stok Barang") ? new Color(255, 153, 204) : new Color(255, 204, 229));
+            button.setBorderPainted(false);
+            final String menuName = item;
+            button.addActionListener(e -> navigateTo(menuName));
+            sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+            sidebar.add(button);
         }
 
-        // Header
-        JPanel header = new JPanel();
-        header.setBackground(new Color(255, 102, 178));
+        JPanel header = new JPanel(new BorderLayout());
         header.setPreferredSize(new Dimension(getWidth(), 60));
-        header.setLayout(new BorderLayout(10, 0));
+        header.setBackground(new Color(255, 105, 180));
 
-        JLabel title = new JLabel("   Manajemen Stok Barang");
-        title.setFont(new Font("SansSerif", Font.BOLD, 20));
-        header.add(title, BorderLayout.WEST);
+        JLabel title = new JLabel("  Manajemen Stok Barang");
+        title.setFont(new Font("SansSerif", Font.BOLD, 24));
+        title.setForeground(Color.BLACK);
 
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        searchPanel.setBackground(header.getBackground());
-        JTextField searchField = new JTextField("Cari", 15);
-        JButton searchButton = new JButton("🔍");
-        JButton profileButton = new JButton("👤");
-        profileButton.setPreferredSize(new Dimension(40, 40));
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        searchField = new JTextField("", 15);
+        JButton searchBtn = new JButton("\uD83D\uDD0D");
+        JLabel profileIcon = new JLabel("\uD83D\uDC64");
+
+        searchPanel.setBackground(new Color(255, 105, 180));
         searchPanel.add(searchField);
-        searchPanel.add(searchButton);
-        searchPanel.add(profileButton);
+        searchPanel.add(searchBtn);
+        searchPanel.add(profileIcon);
+
+        header.add(title, BorderLayout.WEST);
         header.add(searchPanel, BorderLayout.EAST);
 
-        // Konten
-        JPanel content = new JPanel(new BorderLayout());
-        content.setBackground(Color.WHITE);
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setBackground(Color.WHITE);
 
-        JLabel stokLabel = new JLabel("Stok Barang", SwingConstants.CENTER);
-        stokLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
-        stokLabel.setOpaque(true);
-        stokLabel.setBackground(new Color(255, 204, 229));
-        stokLabel.setPreferredSize(new Dimension(getWidth(), 50));
-        content.add(stokLabel, BorderLayout.NORTH);
+        JLabel tableTitle = new JLabel("Stok Barang", JLabel.CENTER);
+        tableTitle.setFont(new Font("SansSerif", Font.BOLD, 22));
+        tableTitle.setOpaque(true);
+        tableTitle.setBackground(new Color(255, 204, 229));
+        tableTitle.setPreferredSize(new Dimension(100, 50));
 
-        // Tabel stok barang
-        String[] columns = {"Nama Barang", "Stok", "+", "-"};
-        Object[][] data = {
-                {"Mawar", 10},
-                {"Tulip", 20}
-        };
-
-        tableModel = new DefaultTableModel(data, columns) {
+        String[] columnNames = {"ID", "Nama Barang", "Satuan", "Stok", "Status", "Keterangan"};
+        tableModel = new DefaultTableModel(columnNames, 0) {
             public boolean isCellEditable(int row, int column) {
-                return column == 2 || column == 3;
-            }
-
-            public Class<?> getColumnClass(int columnIndex) {
-                return (columnIndex == 1) ? Integer.class : Object.class;
+                return false;
             }
         };
 
-        JTable table = new JTable(tableModel);
-        table.setRowHeight(40);
+        table = new JTable(tableModel);
+        table.setRowHeight(30);
+        table.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        table.getTableHeader().setBackground(new Color(221, 160, 221));
+        table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 16));
 
-        // Tambahkan tombol ke kolom "+"
-        table.getColumn("+").setCellRenderer(new ButtonRenderer("+"));
-        table.getColumn("+").setCellEditor(new ButtonEditor(new JCheckBox(), true));
-
-        // Tambahkan tombol ke kolom "−"
-        table.getColumn("-").setCellRenderer(new ButtonRenderer("−"));
-        table.getColumn("-").setCellEditor(new ButtonEditor(new JCheckBox(), false));
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
 
         JScrollPane scrollPane = new JScrollPane(table);
-        content.add(scrollPane, BorderLayout.CENTER);
 
-        // Tambahkan ke frame
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        btnEdit = new JButton("Edit Barang");
+        btnExport = new JButton("Export CSV");
+        buttonPanel.add(btnEdit);
+        buttonPanel.add(btnExport);
+
+        JPanel tableContainer = new JPanel(new BorderLayout());
+        tableContainer.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
+        tableContainer.add(tableTitle, BorderLayout.NORTH);
+        tableContainer.add(scrollPane, BorderLayout.CENTER);
+        tableContainer.add(buttonPanel, BorderLayout.SOUTH);
+        tableContainer.setBackground(Color.WHITE);
+
+        contentPanel.add(tableContainer, BorderLayout.CENTER);
+
         add(sidebar, BorderLayout.WEST);
         add(header, BorderLayout.NORTH);
-        add(content, BorderLayout.CENTER);
+        add(contentPanel, BorderLayout.CENTER);
+
+        loadStokData();
+
+        searchBtn.addActionListener(e -> searchBarang());
+        btnEdit.addActionListener(e -> editSelectedBarang());
+        btnExport.addActionListener(e -> exportToCSV());
 
         setVisible(true);
     }
 
-    // Renderer tombol terlihat seperti label
-    class ButtonRenderer extends JButton implements TableCellRenderer {
-        public ButtonRenderer(String text) {
-            setText(text);
-            setOpaque(false);
-            setContentAreaFilled(false);
-            setBorderPainted(false);
-            setForeground(Color.BLACK);
-            setFont(new Font("SansSerif", Font.BOLD, 18));
-        }
-
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                                                       boolean isSelected, boolean hasFocus, int row, int column) {
-            return this;
+    private void navigateTo(String menuName) {
+        switch (menuName) {
+            case "Dashboard":
+                new Dashboard().setVisible(true);
+                dispose();
+                break;
+            case "Stok Barang":
+                break;
+            case "Barang Masuk":
+                new BarangMasuk().setVisible(true);
+                dispose();
+                break;
+            case "Barang Keluar":
+                new BarangKeluar().setVisible(true);
+                dispose();
+                break;
+            case "Pengaturan":
+                new Pengaturan().setVisible(true);
+                dispose();
+                break;
         }
     }
 
-    // Editor untuk klik tombol
-    class ButtonEditor extends DefaultCellEditor {
-        private JButton button;
-        private boolean isPlus;
-        private int row;
+    private void searchBarang() {
+        String keyword = searchField.getText().trim().toLowerCase();
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+        table.setRowSorter(sorter);
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
+    }
 
-        public ButtonEditor(JCheckBox checkBox, boolean isPlus) {
-            super(checkBox);
-            this.isPlus = isPlus;
-            button = new JButton(isPlus ? "+" : "−");
-            button.setOpaque(false);
-            button.setContentAreaFilled(false);
-            button.setBorderPainted(false);
-            button.setForeground(Color.BLACK);
-            button.setFont(new Font("SansSerif", Font.BOLD, 18));
-            button.addActionListener(e -> {
-                int currentValue = (int) tableModel.getValueAt(row, 1);
-                if (isPlus) {
-                    tableModel.setValueAt(currentValue + 1, row, 1);
-                } else {
-                    if (currentValue > 0) {
-                        tableModel.setValueAt(currentValue - 1, row, 1);
-                    }
+    private void loadStokData() {
+        tableModel.setRowCount(0);
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "");
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang")) {
+
+            while (rs.next()) {
+                int stok = rs.getInt("stok");
+                String status;
+                if (stok == 0) status = "❌ Kosong";
+                else if (stok <= 5) status = "⚠️ Rendah";
+                else status = "✅ Aman";
+
+                Object[] row = {
+                        rs.getInt("id_barang"),
+                        rs.getString("nama_barang"),
+                        rs.getString("satuan"),
+                        stok,
+                        status,
+                        rs.getString("keterangan")
+                };
+                tableModel.addRow(row);
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data stok: " + e.getMessage());
+        }
+    }
+
+    private void editSelectedBarang() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih barang yang ingin diedit.");
+            return;
+        }
+
+        int modelRow = table.convertRowIndexToModel(selectedRow);
+        int id = (int) tableModel.getValueAt(modelRow, 0);
+        String nama = (String) tableModel.getValueAt(modelRow, 1);
+        String satuan = (String) tableModel.getValueAt(modelRow, 2);
+        int stok = (int) tableModel.getValueAt(modelRow, 3);
+        String keterangan = (String) tableModel.getValueAt(modelRow, 5);
+
+        JTextField tfNama = new JTextField(nama);
+        JTextField tfSatuan = new JTextField(satuan);
+        JTextField tfKeterangan = new JTextField(keterangan);
+
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        panel.add(new JLabel("Nama Barang:"));
+        panel.add(tfNama);
+        panel.add(new JLabel("Satuan:"));
+        panel.add(tfSatuan);
+        panel.add(new JLabel("Keterangan:"));
+        panel.add(tfKeterangan);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Edit Barang", JOptionPane.OK_CANCEL_OPTION);
+        if (result == JOptionPane.OK_OPTION) {
+            String newNama = tfNama.getText().trim();
+            String newSatuan = tfSatuan.getText().trim();
+            String newKet = tfKeterangan.getText().trim();
+
+            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "")) {
+                String update = "UPDATE tb_barang SET nama_barang = ?, satuan = ?, keterangan = ? WHERE id_barang = ?";
+                PreparedStatement ps = conn.prepareStatement(update);
+                ps.setString(1, newNama);
+                ps.setString(2, newSatuan);
+                ps.setString(3, newKet);
+                ps.setInt(4, id);
+                int updated = ps.executeUpdate();
+                if (updated > 0) {
+                    JOptionPane.showMessageDialog(this, "Barang berhasil diperbarui.");
+                    loadStokData();
                 }
-                fireEditingStopped();
-            });
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Gagal memperbarui barang: " + e.getMessage());
+            }
         }
+    }
 
-        public Component getTableCellEditorComponent(JTable table, Object value,
-                                                     boolean isSelected, int row, int column) {
-            this.row = row;
-            return button;
-        }
+    private void exportToCSV() {
+        try (FileWriter writer = new FileWriter("stok_barang_export.csv")) {
+            for (int i = 0; i < table.getColumnCount(); i++) {
+                writer.append('"').append(table.getColumnName(i)).append('"');
+                if (i < table.getColumnCount() - 1) writer.append(',');
+            }
+            writer.append('\n');
 
-        public Object getCellEditorValue() {
-            return button.getText();
+            for (int row = 0; row < table.getRowCount(); row++) {
+                for (int col = 0; col < table.getColumnCount(); col++) {
+                    Object value = table.getValueAt(row, col);
+                    String cell = value == null ? "" : value.toString().replace("\"", "\"\"");
+                    writer.append('"').append(cell).append('"');
+                    if (col < table.getColumnCount() - 1) writer.append(',');
+                }
+                writer.append('\n');
+            }
+            writer.flush();
+            JOptionPane.showMessageDialog(this, "Data berhasil diexport ke stok_barang_export.csv");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Gagal export data: " + e.getMessage());
         }
     }
 
