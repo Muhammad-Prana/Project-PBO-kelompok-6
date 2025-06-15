@@ -2,6 +2,8 @@ package appStokBarang.aplikasi;
 
 import javax.swing.*;
 import javax.swing.table.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.FileWriter;
@@ -13,6 +15,11 @@ public class StokBarang extends JFrame {
     private DefaultTableModel tableModel;
     private JTextField searchField;
     private JButton btnEdit, btnExport;
+
+    // Koneksi database
+    private final String DB_URL = "jdbc:mysql://localhost:3306/db_stokbarang";
+    private final String DB_USER = "root";
+    private final String DB_PASSWORD = "";
 
     public StokBarang() {
         setTitle("Manajemen Stok Barang - Stok Barang");
@@ -29,7 +36,6 @@ public class StokBarang extends JFrame {
         JLabel logo = new JLabel("\uD83C\uDF38", JLabel.CENTER);
         logo.setFont(new Font("SansSerif", Font.PLAIN, 48));
         logo.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         sidebar.add(Box.createVerticalStrut(20));
         sidebar.add(logo);
 
@@ -119,7 +125,21 @@ public class StokBarang extends JFrame {
 
         loadStokData();
 
-        searchBtn.addActionListener(e -> searchBarang());
+        // Auto-search saat mengetik
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+        });
+
         btnEdit.addActionListener(e -> editSelectedBarang());
         btnExport.addActionListener(e -> exportToCSV());
 
@@ -149,25 +169,15 @@ public class StokBarang extends JFrame {
         }
     }
 
-    private void searchBarang() {
-        String keyword = searchField.getText().trim().toLowerCase();
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
-        table.setRowSorter(sorter);
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
-    }
-
     private void loadStokData() {
         tableModel.setRowCount(0);
-        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "");
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang")) {
 
             while (rs.next()) {
                 int stok = rs.getInt("stok");
-                String status;
-                if (stok == 0) status = "❌ Kosong";
-                else if (stok <= 5) status = "⚠️ Rendah";
-                else status = "✅ Aman";
+                String status = getStatusText(stok);
 
                 Object[] row = {
                         rs.getInt("id_barang"),
@@ -183,6 +193,45 @@ public class StokBarang extends JFrame {
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Gagal memuat data stok: " + e.getMessage());
         }
+    }
+
+    private void searchData(String keyword) {
+        tableModel.setRowCount(0);
+        String sql = "SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang " +
+                "WHERE nama_barang LIKE ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                int stok = rs.getInt("stok");
+                String status = getStatusText(stok);
+
+                Object[] row = {
+                        rs.getInt("id_barang"),
+                        rs.getString("nama_barang"),
+                        rs.getString("satuan"),
+                        stok,
+                        status,
+                        rs.getString("keterangan")
+                };
+                tableModel.addRow(row);
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Gagal melakukan pencarian:\n" + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private String getStatusText(int stok) {
+        if (stok == 0) return "❌ Kosong";
+        else if (stok <= 5) return "⚠ Rendah";
+        else return "✅ Aman";
     }
 
     private void editSelectedBarang() {
@@ -217,7 +266,7 @@ public class StokBarang extends JFrame {
             String newSatuan = tfSatuan.getText().trim();
             String newKet = tfKeterangan.getText().trim();
 
-            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "")) {
+            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
                 String update = "UPDATE tb_barang SET nama_barang = ?, satuan = ?, keterangan = ? WHERE id_barang = ?";
                 PreparedStatement ps = conn.prepareStatement(update);
                 ps.setString(1, newNama);

@@ -1,6 +1,8 @@
 package appStokBarang.aplikasi;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -9,6 +11,7 @@ import java.sql.*;
 public class Dashboard extends JFrame {
 
     private DefaultTableModel model;
+    private JTextField searchField;
 
     private static final String DB_URL = "jdbc:mysql://localhost:3306/db_stokbarang";
     private static final String DB_USER = "root";
@@ -56,9 +59,45 @@ public class Dashboard extends JFrame {
         title.setForeground(Color.BLACK);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        JTextField searchField = new JTextField("Cari", 15);
+        searchField = new JTextField("Cari", 15);
         JButton searchBtn = new JButton("\uD83D\uDD0D");
         JLabel profileIcon = new JLabel("\uD83D\uDC64");
+
+        // Placeholder behavior
+        searchField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                if (searchField.getText().equals("Cari")) {
+                    searchField.setText("");
+                }
+            }
+
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                if (searchField.getText().isEmpty()) {
+                    searchField.setText("Cari");
+                }
+            }
+        });
+
+        // Tombol cari ditekan
+        searchBtn.addActionListener(e -> {
+            String keyword = searchField.getText().trim();
+            searchData(keyword);
+        });
+
+        // Ketik otomatis pencarian
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+        });
 
         searchPanel.setBackground(new Color(255, 105, 180));
         searchPanel.add(searchField);
@@ -148,7 +187,7 @@ public class Dashboard extends JFrame {
                 int stok = rs.getInt("stok");
                 String status;
                 if (stok == 0) status = "❌ Kosong";
-                else if (stok <= 5) status = "⚠️ Rendah";
+                else if (stok <= 5) status = "⚠ Rendah";
                 else status = "✅ Aman";
 
                 Object[] row = {
@@ -165,6 +204,42 @@ public class Dashboard extends JFrame {
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,
                     "Gagal memuat data dari database:\n" + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void searchData(String keyword) {
+        model.setRowCount(0);
+        String sql = "SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang " +
+                "WHERE nama_barang LIKE ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                int stok = rs.getInt("stok");
+                String status;
+                if (stok == 0) status = "❌ Kosong";
+                else if (stok <= 5) status = "⚠ Rendah";
+                else status = "✅ Aman";
+
+                Object[] row = {
+                        rs.getInt("id_barang"),
+                        rs.getString("nama_barang"),
+                        rs.getString("satuan"),
+                        stok,
+                        status,
+                        rs.getString("keterangan")
+                };
+                model.addRow(row);
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Gagal melakukan pencarian:\n" + e.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
         }
