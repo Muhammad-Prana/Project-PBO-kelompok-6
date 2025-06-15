@@ -1,6 +1,8 @@
 package appStokBarang.aplikasi;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
@@ -9,6 +11,7 @@ public class BarangKeluar extends JFrame {
     private JComboBox<String> cbNamaBarang;
     private JTextField tfJumlah, tfTanggal, tfKeterangan;
     private DefaultTableModel tableModel;
+    private JTextField searchField;
 
     public BarangKeluar() {
         setTitle("Manajemen Stok Barang - Barang Keluar");
@@ -53,7 +56,23 @@ public class BarangKeluar extends JFrame {
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         searchPanel.setBackground(new Color(255, 105, 180));
-        JTextField searchField = new JTextField("Cari", 15);
+        searchField = new JTextField("Cari", 15);
+
+        // Auto-search saat mengetik
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                searchData(searchField.getText().trim());
+            }
+        });
+
         JButton searchButton = new JButton("\uD83D\uDD0D");
         JLabel profile = new JLabel("\uD83D\uDC64");
 
@@ -131,7 +150,7 @@ public class BarangKeluar extends JFrame {
         add(header, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
 
-        tampilkanDataKeTabel();
+        tampilkanDataKeTabel("");
         setVisible(true);
     }
 
@@ -157,6 +176,10 @@ public class BarangKeluar extends JFrame {
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Gagal memuat nama barang: " + e.getMessage());
         }
+    }
+
+    private void searchData(String keyword) {
+        tampilkanDataKeTabel(keyword);
     }
 
     private void simpanDataBarangKeluar() {
@@ -212,7 +235,7 @@ public class BarangKeluar extends JFrame {
                     psUpdate.executeUpdate();
 
                     JOptionPane.showMessageDialog(this, "Data berhasil disimpan!");
-                    tampilkanDataKeTabel();
+                    tampilkanDataKeTabel("");
                     tfJumlah.setText("");
                     tfTanggal.setText("2025-06-15");
                     tfKeterangan.setText("");
@@ -227,11 +250,22 @@ public class BarangKeluar extends JFrame {
         }
     }
 
-    private void tampilkanDataKeTabel() {
+    private void tampilkanDataKeTabel(String keyword) {
         tableModel.setRowCount(0);
+        String sql = "SELECT sk.tanggal_keluar, b.nama_barang, sk.jumlah, sk.keterangan FROM tb_stok_keluar sk " +
+                "JOIN tb_barang b ON sk.id_barang = b.id_barang WHERE " +
+                "b.nama_barang LIKE ? OR sk.tanggal_keluar LIKE ? OR sk.keterangan LIKE ? " +
+                "ORDER BY sk.id_keluar DESC";
+
         try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "");
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT sk.tanggal_keluar, b.nama_barang, sk.jumlah, sk.keterangan FROM tb_stok_keluar sk JOIN tb_barang b ON sk.id_barang = b.id_barang ORDER BY sk.id_keluar DESC")) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String filter = "%" + keyword + "%";
+            ps.setString(1, filter);
+            ps.setString(2, filter);
+            ps.setString(3, filter);
+
+            ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 Object[] row = {
                         rs.getString("tanggal_keluar"),

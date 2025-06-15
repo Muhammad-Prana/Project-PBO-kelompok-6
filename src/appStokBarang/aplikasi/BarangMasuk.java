@@ -4,12 +4,15 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BarangMasuk extends JFrame {
     private JComboBox<String> cbNamaBarang;
     private JTextField tfJumlah, tfTanggal, tfKeterangan;
     private DefaultTableModel tableModel;
     private JTable table;
+    private List<Object[]> dataAsli = new ArrayList<>();
 
     public BarangMasuk() {
         setTitle("Manajemen Stok Barang - Barang Masuk");
@@ -54,8 +57,46 @@ public class BarangMasuk extends JFrame {
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         JTextField searchField = new JTextField("Cari", 15);
+        searchField.setForeground(Color.GRAY);
+
+        searchField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (searchField.getText().equals("Cari")) {
+                    searchField.setText("");
+                    searchField.setForeground(Color.BLACK);
+                }
+            }
+
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (searchField.getText().isEmpty()) {
+                    searchField.setForeground(Color.GRAY);
+                    searchField.setText("Cari");
+                }
+            }
+        });
+
         JButton searchBtn = new JButton("\uD83D\uDD0D");
         JLabel profileIcon = new JLabel("\uD83D\uDC64");
+
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { cari(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { cari(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { cari(); }
+
+            public void cari() {
+                String keyword = searchField.getText().trim();
+                if (!keyword.equals("Cari")) {
+                    filterTabel(keyword);
+                }
+            }
+        });
+
+        searchBtn.addActionListener(e -> {
+            String keyword = searchField.getText().trim();
+            if (!keyword.equals("Cari")) {
+                filterTabel(keyword);
+            }
+        });
 
         searchPanel.setBackground(new Color(255, 105, 180));
         searchPanel.add(searchField);
@@ -203,6 +244,8 @@ public class BarangMasuk extends JFrame {
 
     private void tampilkanDataKeTabel() {
         tableModel.setRowCount(0);
+        dataAsli.clear();
+
         try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "");
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT sm.tanggal_masuk, b.nama_barang, sm.jumlah, sm.keterangan FROM tb_stok_masuk sm JOIN tb_barang b ON sm.id_barang = b.id_barang ORDER BY sm.id_masuk DESC")) {
@@ -214,9 +257,24 @@ public class BarangMasuk extends JFrame {
                         rs.getString("keterangan")
                 };
                 tableModel.addRow(row);
+                dataAsli.add(row);
             }
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Gagal memuat data tabel: " + e.getMessage());
+        }
+    }
+
+    private void filterTabel(String keyword) {
+        tableModel.setRowCount(0);
+        String lowerKeyword = keyword.toLowerCase();
+
+        for (Object[] row : dataAsli) {
+            if (row[0].toString().toLowerCase().contains(lowerKeyword) ||
+                    row[1].toString().toLowerCase().contains(lowerKeyword) ||
+                    row[2].toString().toLowerCase().contains(lowerKeyword) ||
+                    row[3].toString().toLowerCase().contains(lowerKeyword)) {
+                tableModel.addRow(row);
+            }
         }
     }
 

@@ -147,8 +147,8 @@ public class Pengaturan2 extends JFrame {
         int confirm = JOptionPane.showConfirmDialog(this, "Apakah Anda yakin ingin logout?", "Konfirmasi Logout", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
-            JOptionPane.showMessageDialog(null, "Berhasil logout.");
-            new Login().setVisible(true); // pastikan Login terletak di package dan file yang benar
+//            JOptionPane.showMessageDialog(null, "Berhasil logout.");
+//            new Login().setVisible(true); // pastikan Login terletak di package dan file yang benar
         }
     }
 
