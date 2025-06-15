@@ -28,7 +28,6 @@ public class BarangKeluar extends JFrame {
 
         sidebar.add(Box.createVerticalStrut(20));
         sidebar.add(logo);
-        sidebar.add(Box.createVerticalStrut(20));
 
         String[] menuItems = {"Dashboard", "Stok Barang", "Barang Masuk", "Barang Keluar", "Pengaturan"};
         for (String item : menuItems) {
@@ -39,12 +38,7 @@ public class BarangKeluar extends JFrame {
             button.setBackground(item.equals("Barang Keluar") ? new Color(255, 153, 204) : new Color(255, 204, 229));
             button.setBorderPainted(false);
             final String menuName = item;
-            button.addActionListener(ev -> {
-                if (menuName.equals("Dashboard")) {
-                    new Dashboard().setVisible(true);
-                    dispose();
-                }
-            });
+            button.addActionListener(ev -> navigateTo(menuName));
             sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
             sidebar.add(button);
         }
@@ -109,13 +103,18 @@ public class BarangKeluar extends JFrame {
 
         loadNamaBarang();
 
-        formPanel.add(new JLabel("Nama Barang"));
+        JLabel lblNama = new JLabel("Nama Barang", SwingConstants.RIGHT);
+        JLabel lblJumlah = new JLabel("Jumlah", SwingConstants.RIGHT);
+        JLabel lblTanggal = new JLabel("Tanggal Keluar", SwingConstants.RIGHT);
+        JLabel lblKeterangan = new JLabel("Keterangan", SwingConstants.RIGHT);
+
+        formPanel.add(lblNama);
         formPanel.add(cbNamaBarang);
-        formPanel.add(new JLabel("Jumlah"));
+        formPanel.add(lblJumlah);
         formPanel.add(tfJumlah);
-        formPanel.add(new JLabel("Tanggal Keluar"));
+        formPanel.add(lblTanggal);
         formPanel.add(tfTanggal);
-        formPanel.add(new JLabel("Keterangan"));
+        formPanel.add(lblKeterangan);
         formPanel.add(tfKeterangan);
 
         JButton btnSimpan = new JButton("Simpan");
@@ -134,6 +133,17 @@ public class BarangKeluar extends JFrame {
 
         tampilkanDataKeTabel();
         setVisible(true);
+    }
+
+    private void navigateTo(String menuName) {
+        switch (menuName) {
+            case "Dashboard": new Dashboard().setVisible(true); break;
+            case "Stok Barang": new StokBarang().setVisible(true); break;
+            case "Barang Masuk": new BarangMasuk().setVisible(true); break;
+            case "Barang Keluar": new BarangKeluar().setVisible(true); break;
+            case "Pengaturan": new Pengaturan2().setVisible(true); break;
+        }
+        dispose();
     }
 
     private void loadNamaBarang() {

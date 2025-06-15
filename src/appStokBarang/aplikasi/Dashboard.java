@@ -132,7 +132,7 @@ public class Dashboard extends JFrame {
                 dispose();
                 break;
             case "Pengaturan":
-                new Pengaturan().setVisible(true);
+                new Pengaturan2().setVisible(true);
                 dispose();
                 break;
         }

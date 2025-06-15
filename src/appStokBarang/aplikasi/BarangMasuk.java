@@ -1,7 +1,6 @@
 package appStokBarang.aplikasi;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
@@ -152,26 +151,176 @@ public class BarangMasuk extends JFrame {
 
     private void navigateTo(String menuName) {
         switch (menuName) {
-            case "Dashboard":
-                new Dashboard().setVisible(true);
-                break;
-            case "Stok Barang":
-                new StokBarang().setVisible(true);
-                break;
-            case "Barang Masuk":
-                new BarangMasuk().setVisible(true);
-                break;
-            case "Barang Keluar":
-                new BarangKeluar().setVisible(true);
-                break;
-            case "Pengaturan":
-                new Pengaturan().setVisible(true);
-                break;
+            case "Dashboard": new Dashboard().setVisible(true); break;
+            case "Stok Barang": new StokBarang().setVisible(true); break;
+            case "Barang Masuk": new BarangMasuk().setVisible(true); break;
+            case "Barang Keluar": new BarangKeluar().setVisible(true); break;
+            case "Pengaturan": new Pengaturan2().setVisible(true); break;
         }
         dispose();
     }
 
-    // ... (fungsi loadNamaBarang, tambahNamaBarangBaru, tampilkanDataKeTabel, simpanDataBarangMasuk, hapusDataBarangMasuk tetap sama)
+    private void loadNamaBarang() {
+        cbNamaBarang.removeAllItems();
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "");
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT nama_barang FROM tb_barang")) {
+            while (rs.next()) {
+                cbNamaBarang.addItem(rs.getString("nama_barang"));
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat nama barang: " + e.getMessage());
+        }
+    }
+
+    private void tambahNamaBarangBaru() {
+        String namaBaru = JOptionPane.showInputDialog(this, "Masukkan nama barang baru:");
+        if (namaBaru != null && !namaBaru.trim().isEmpty()) {
+            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "")) {
+                String cekQuery = "SELECT COUNT(*) FROM tb_barang WHERE nama_barang = ?";
+                PreparedStatement cekStmt = conn.prepareStatement(cekQuery);
+                cekStmt.setString(1, namaBaru.trim());
+                ResultSet rs = cekStmt.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    JOptionPane.showMessageDialog(this, "Barang sudah terdaftar.");
+                    return;
+                }
+
+                String insertQuery = "INSERT INTO tb_barang (nama_barang, kategori, satuan, harga, keterangan, stok) VALUES (?, 'lainnya', 'pcs', 0, '', 0)";
+                PreparedStatement stmt = conn.prepareStatement(insertQuery);
+                stmt.setString(1, namaBaru.trim());
+                stmt.executeUpdate();
+
+                loadNamaBarang();
+                cbNamaBarang.setSelectedItem(namaBaru.trim());
+
+                JOptionPane.showMessageDialog(this, "Barang berhasil ditambahkan.");
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Gagal menambahkan barang: " + e.getMessage());
+            }
+        }
+    }
+
+    private void tampilkanDataKeTabel() {
+        tableModel.setRowCount(0);
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "");
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT sm.tanggal_masuk, b.nama_barang, sm.jumlah, sm.keterangan FROM tb_stok_masuk sm JOIN tb_barang b ON sm.id_barang = b.id_barang ORDER BY sm.id_masuk DESC")) {
+            while (rs.next()) {
+                Object[] row = {
+                        rs.getString("tanggal_masuk"),
+                        rs.getString("nama_barang"),
+                        rs.getInt("jumlah"),
+                        rs.getString("keterangan")
+                };
+                tableModel.addRow(row);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data tabel: " + e.getMessage());
+        }
+    }
+
+    private void simpanDataBarangMasuk() {
+        String namaBarang = (String) cbNamaBarang.getSelectedItem();
+        int jumlah;
+        String tanggal = tfTanggal.getText().trim();
+        String keterangan = tfKeterangan.getText().trim();
+
+        try {
+            jumlah = Integer.parseInt(tfJumlah.getText().trim());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Jumlah harus berupa angka!");
+            return;
+        }
+
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "")) {
+            String queryId = "SELECT id_barang FROM tb_barang WHERE nama_barang = ?";
+            PreparedStatement psId = conn.prepareStatement(queryId);
+            psId.setString(1, namaBarang);
+            ResultSet rsId = psId.executeQuery();
+
+            if (rsId.next()) {
+                int idBarang = rsId.getInt("id_barang");
+
+                String queryInsert = "INSERT INTO tb_stok_masuk (id_barang, jumlah, tanggal_masuk, keterangan) VALUES (?, ?, ?, ?)";
+                PreparedStatement psInsert = conn.prepareStatement(queryInsert);
+                psInsert.setInt(1, idBarang);
+                psInsert.setInt(2, jumlah);
+                psInsert.setString(3, tanggal);
+                psInsert.setString(4, keterangan);
+
+                int rows = psInsert.executeUpdate();
+                if (rows > 0) {
+                    String updateStok = "UPDATE tb_barang SET stok = stok + ? WHERE id_barang = ?";
+                    PreparedStatement psUpdate = conn.prepareStatement(updateStok);
+                    psUpdate.setInt(1, jumlah);
+                    psUpdate.setInt(2, idBarang);
+                    psUpdate.executeUpdate();
+
+                    JOptionPane.showMessageDialog(this, "Data berhasil disimpan!");
+                    tampilkanDataKeTabel();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Barang tidak ditemukan.");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan data: " + e.getMessage());
+        }
+    }
+
+    private void hapusDataBarangMasuk() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Pilih data yang ingin dihapus.");
+            return;
+        }
+
+        String tanggal = tableModel.getValueAt(selectedRow, 0).toString();
+        String namaBarang = tableModel.getValueAt(selectedRow, 1).toString();
+        int jumlah = Integer.parseInt(tableModel.getValueAt(selectedRow, 2).toString());
+        String keterangan = tableModel.getValueAt(selectedRow, 3).toString();
+
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/db_stokbarang", "root", "")) {
+            String getIdQuery = "SELECT id_barang, stok FROM tb_barang WHERE nama_barang = ?";
+            PreparedStatement getIdStmt = conn.prepareStatement(getIdQuery);
+            getIdStmt.setString(1, namaBarang);
+            ResultSet rs = getIdStmt.executeQuery();
+
+            if (rs.next()) {
+                int idBarang = rs.getInt("id_barang");
+                int stokSaatIni = rs.getInt("stok");
+
+                if (stokSaatIni < jumlah) {
+                    JOptionPane.showMessageDialog(this, "Tidak bisa menghapus karena stok saat ini lebih kecil dari jumlah yang ingin dihapus.");
+                    return;
+                }
+
+                String deleteQuery = "DELETE FROM tb_stok_masuk WHERE id_barang = ? AND tanggal_masuk = ? AND jumlah = ? AND keterangan = ? LIMIT 1";
+                PreparedStatement psDelete = conn.prepareStatement(deleteQuery);
+                psDelete.setInt(1, idBarang);
+                psDelete.setString(2, tanggal);
+                psDelete.setInt(3, jumlah);
+                psDelete.setString(4, keterangan);
+
+                int affected = psDelete.executeUpdate();
+                if (affected > 0) {
+                    String updateStok = "UPDATE tb_barang SET stok = stok - ? WHERE id_barang = ?";
+                    PreparedStatement psUpdate = conn.prepareStatement(updateStok);
+                    psUpdate.setInt(1, jumlah);
+                    psUpdate.setInt(2, idBarang);
+                    psUpdate.executeUpdate();
+
+                    JOptionPane.showMessageDialog(this, "Riwayat berhasil dihapus dan stok diperbarui.");
+                    tampilkanDataKeTabel();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Data tidak ditemukan atau gagal dihapus.");
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal menghapus data: " + e.getMessage());
+        }
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(BarangMasuk::new);
