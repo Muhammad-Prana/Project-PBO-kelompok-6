@@ -1,3 +1,4 @@
+// ... package dan import tidak berubah
 package appStokBarang.aplikasi;
 
 import javax.swing.*;
@@ -59,24 +60,10 @@ public class Dashboard extends JFrame {
         title.setForeground(Color.BLACK);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        searchField = new JTextField("Cari", 15);
+        searchField = new JTextField(15);
+        searchField.setText(""); // Mulai tanpa placeholder
         JButton searchBtn = new JButton("\uD83D\uDD0D");
         JLabel profileIcon = new JLabel("\uD83D\uDC64");
-
-        // Placeholder behavior
-        searchField.addFocusListener(new java.awt.event.FocusAdapter() {
-            public void focusGained(java.awt.event.FocusEvent evt) {
-                if (searchField.getText().equals("Cari")) {
-                    searchField.setText("");
-                }
-            }
-
-            public void focusLost(java.awt.event.FocusEvent evt) {
-                if (searchField.getText().isEmpty()) {
-                    searchField.setText("Cari");
-                }
-            }
-        });
 
         // Tombol cari ditekan
         searchBtn.addActionListener(e -> {
@@ -211,12 +198,22 @@ public class Dashboard extends JFrame {
 
     private void searchData(String keyword) {
         model.setRowCount(0);
-        String sql = "SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang " +
-                "WHERE nama_barang LIKE ?";
+        String sql;
+        boolean isEmptySearch = keyword.isEmpty();
+
+        if (isEmptySearch) {
+            sql = "SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang";
+        } else {
+            sql = "SELECT id_barang, nama_barang, satuan, stok, keterangan FROM tb_barang WHERE nama_barang LIKE ?";
+        }
+
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, "%" + keyword + "%");
+            if (!isEmptySearch) {
+                stmt.setString(1, "%" + keyword + "%");
+            }
+
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
